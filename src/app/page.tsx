@@ -1,86 +1,103 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import ProductCard from "@/components/ProductCard";
 
-interface Todo {
+interface Product {
   _id: string;
-  title: string;
-  completed: boolean;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
 }
 
 export default function Home() {
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [title, setTitle] = useState("");
+  const router = useRouter();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [token, setToken] = useState<string | null>(null);
 
-  async function fetchTodos() {
-    const res = await fetch("/api/todos");
-    const data = await res.json();
-    setTodos(data);
-  }
-
-  async function addTodo(e: React.FormEvent) {
-    e.preventDefault();
-    await fetch("/api/todos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
-    });
-    setTitle("");
-    fetchTodos();
-  }
-
-  async function toggleComplete(id: string, completed: boolean) {
-    await fetch(`/api/todos/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: !completed }),
-    });
-    fetchTodos();
-  }
-
-  async function deleteTodo(id: string) {
-    await fetch(`/api/todos/${id}`, { method: "DELETE" });
-    fetchTodos();
-  }
-
+  // Load token on mount
   useEffect(() => {
-    fetchTodos();
+    const storedToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    setToken(storedToken);
   }, []);
+
+  // Fetch products
+  useEffect(() => {
+    fetch("/api/products")
+      .then(res => res.json())
+      .then(setProducts)
+      .catch(err => console.error("Failed to fetch products:", err));
+  }, []);
+
+  // Logout handler
+  function handleLogout() {
+    localStorage.removeItem("token");
+    setToken(null);
+    router.push("/signin");
+  }
+
+  // Navigate to add product page
+  function handleAddProduct() {
+    router.push("/add-product");
+  }
+
+  // Navigate to login page
+  function handleLogin() {
+    router.push("/signin");
+  }
+
+  // Navigate to signup page
+  function handleSignup() {
+    router.push("/signup");
+  }
 
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-bold">Next.js + MongoDB CRUD</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Products</h1>
 
-      <form onSubmit={addTodo} className="mt-4 flex gap-2">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Enter todo"
-          className="border p-2 rounded"
-        />
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-          Add
-        </button>
-      </form>
-
-      <ul className="mt-6 space-y-2">
-        {todos.map((todo) => (
-          <li key={todo._id} className="flex justify-between items-center border p-2 rounded">
-            <span
-              onClick={() => toggleComplete(todo._id, todo.completed)}
-              className={todo.completed ? "line-through cursor-pointer" : "cursor-pointer"}
-            >
-              {todo.title}
-            </span>
+        {token ? (
+          <div className="flex gap-2">
             <button
-              onClick={() => deleteTodo(todo._id)}
-              className="bg-red-500 text-white px-2 py-1 rounded"
+              onClick={handleAddProduct}
+              className="bg-blue-500 text-white px-4 py-2 rounded"
             >
-              Delete
+              Add Product
             </button>
-          </li>
-        ))}
-      </ul>
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 text-white px-4 py-2 rounded"
+            >
+              Log Out
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={handleLogin}
+              className="bg-green-500 text-white px-4 py-2 rounded"
+            >
+              Log In
+            </button>
+            <button
+              onClick={handleSignup}
+              className="bg-yellow-500 text-white px-4 py-2 rounded"
+            >
+              Sign Up
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {products.length > 0 ? (
+          products.map((p) => <ProductCard key={p._id} product={p} />)
+        ) : (
+          <p className="col-span-full text-center text-gray-500">No products found.</p>
+        )}
+      </div>
     </main>
   );
 }
