@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
+import ImageCarousel from '@/components/ImageCarousel'
 
 interface Product {
   _id: string;
@@ -16,6 +17,14 @@ export default function Home() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [token, setToken] = useState<string | null>(null);
+
+    // Bannner Images
+  const bannerImages = [
+    '/banner/1.jpg',
+    '/banner/2.jpg',
+    '/banner/3.jpg',
+    '/banner/4.jpg',
+  ];
 
   // Load token on mount
   useEffect(() => {
@@ -56,7 +65,8 @@ export default function Home() {
   return (
     <main className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Products</h1>
+
+        <h1 className="text-2xl font-bold">MFU 2ndHand</h1>
 
         {token ? (
           <div className="flex gap-2">
@@ -89,6 +99,10 @@ export default function Home() {
             </button>
           </div>
         )}
+      </div>
+      <div className="mb-6">
+         {/* Image Slider - Banner */}
+        <ImageCarousel images={bannerImages} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
