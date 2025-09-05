@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import Navbar from "@/components/Navbar";
+import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
+import Footer from '@/components/layout/Footer';
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -26,8 +30,13 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      ><AuthProvider>
+          <CartProvider>
+            <Navbar />
+            {children}
+            </CartProvider>
+        </AuthProvider>
+        <Footer />
       </body>
     </html>
   );

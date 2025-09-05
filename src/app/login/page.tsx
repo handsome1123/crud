@@ -4,20 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from "@/context/AuthContext";
 
-export default function SigninPage() {
+export default function LoginPage() {
   const router = useRouter(); // ✅ moved inside the component
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [token, setToken] = useState("");
+
+  const { login } = useAuth(); // from AuthContext
 
   async function handleSignin(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
     try {
-      const res = await fetch("https://crud-ten-zeta.vercel.app/api/auth/signin", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -25,9 +27,11 @@ export default function SigninPage() {
 
       const data = await res.json();
       if (res.ok) {
-        setToken(data.token);
-        localStorage.setItem("token", data.token); // store token
-        router.push("/"); // redirect to home page
+        // setToken(data.token);
+        // localStorage.setItem("token", data.token); 
+        // router.push("/products"); // redirect to products page
+        login(data.token); // update auth context
+        router.push("/products"); // redirect to products page
       } else {
         setError(data.error);
       }
@@ -37,7 +41,7 @@ export default function SigninPage() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-indigo-100 animate-gradient-x flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-indigo-100 animate-gradient-x flex items-center justify-center">
     <div className="max-w-4xl bg-white rounded-2xl overflow-hidden flex flex-col md:flex-row animate-fade-in w-full h-full md:h-auto md:max-h-[90vh]">
     
     {/* Image side */}
@@ -103,9 +107,9 @@ export default function SigninPage() {
       </p>
 
       </form>
-      {token && (
+      {/* {token && (
         <p className="mt-4 p-2 bg-gray-100 border break-all">Token: {token}</p>
-      )}
+      )} */}
     </div>
       <style jsx>{`
     @keyframes gradient-x {

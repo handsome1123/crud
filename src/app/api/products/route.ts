@@ -4,6 +4,28 @@ import Product from "@/models/Product";
 import { verifyToken } from "@/lib/auth";
 import cloudinary from "@/lib/cloudinary";
 
+// Define interface for JWT payload
+interface JWTPayload {
+  _id?: string;
+  id?: string;
+  userId?: string;
+  iat?: number;
+  exp?: number;
+}
+
+// GET all products
+export async function GET() {
+  try {
+    await connectDB();
+    const products = await Product.find({});
+    return NextResponse.json(products); // always return JSON array
+  } catch (err) {
+    console.error("API Error:", err);
+    return NextResponse.json([], { status: 500 }); // fallback: empty array
+  }
+}
+
+// POST a new product
 export async function POST(req: Request) {
   try {
     await connectDB();
@@ -13,8 +35,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const token = authHeader.split(" ")[1];
-    const user = verifyToken(token);
-    if (!user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    const userPayload = verifyToken(token);
+    
+    if (!userPayload) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    // Type guard to ensure we have a proper JWT payload object
+    const user = userPayload as JWTPayload;
+    
+    // Get the user ID from various possible field names
+    const userId = user._id || user.id || user.userId;
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid user data in token" }, { status: 401 });
+    }
 
     const formData = await req.formData();
     const name = formData.get("name") as string;
@@ -22,7 +56,9 @@ export async function POST(req: Request) {
     const description = formData.get("description") as string;
     const imageFile = formData.get("image");
 
-    if (!name || !price) return NextResponse.json({ error: "Name and price required" }, { status: 400 });
+    if (!name || !price) {
+      return NextResponse.json({ error: "Name and price required" }, { status: 400 });
+    }
 
     let imageUrl = "";
 
@@ -36,22 +72,18 @@ export async function POST(req: Request) {
       imageUrl = result.secure_url;
     }
 
-    const product = await Product.create({ name, price, description, imageUrl, user: user.id });
+    const product = await Product.create({ 
+      name, 
+      price, 
+      description, 
+      imageUrl, 
+      user: userId 
+    });
+    
     return NextResponse.json(product);
   } catch (err) {
     console.error("API Error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
-  }
-}
-
-
-export async function GET() {
-  try {
-    await connectDB();
-    const products = await Product.find({});
-    return NextResponse.json(products); // always return JSON array
-  } catch (err) {
-    console.error("API Error:", err);
-    return NextResponse.json([], { status: 500 }); // fallback: empty array
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+    return NextResponse.json({ error: "Server error: " + errorMessage }, { status: 500 });
   }
 }
