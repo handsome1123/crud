@@ -1,38 +1,34 @@
-// models/Order.js or models/Order.ts
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document, Types } from "mongoose";
 
-const orderSchema = new mongoose.Schema({
-  // Change from 'user' to 'userId' OR update your API to use 'user'
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
-  },
-  // Alternative: if your schema uses 'user', keep this instead:
-  // user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  
-  customer: {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    phone: { type: String, required: true },
-    address: { type: String, required: true },
-  },
-  items: [{
-    product: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Product', 
-      required: true 
+export interface IOrder extends Document {
+  product: Types.ObjectId;
+  buyer: Types.ObjectId;
+  quantity: number;
+  buyerName: string;
+  buyerEmail: string;
+  buyerAddress: string;
+  buyerPhone: string;
+  status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const OrderSchema: Schema<IOrder> = new Schema(
+  {
+    product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    buyer: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    quantity: { type: Number, default: 1 },
+    buyerName: { type: String, required: true },
+    buyerEmail: { type: String, required: true },
+    buyerAddress: { type: String, required: true },
+    buyerPhone: { type: String, required: true },
+    status: {
+      type: String,
+      enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
+      default: "pending",
     },
-    quantity: { type: Number, required: true },
-    price: { type: Number, required: true }
-  }],
-  total: { type: Number, required: true },
-  status: { 
-    type: String, 
-    enum: ['pending', 'completed', 'cancelled'], 
-    default: 'pending' 
   },
-  createdAt: { type: Date, default: Date.now }
-});
+  { timestamps: true }
+);
 
-export default mongoose.models.Order || mongoose.model('Order', orderSchema);
+export const Order = mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema);

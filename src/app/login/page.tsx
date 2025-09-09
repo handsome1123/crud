@@ -1,146 +1,151 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
-  const router = useRouter(); // ✅ moved inside the component
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  const { login } = useAuth(); // from AuthContext
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
 
-  async function handleSignin(e: React.FormEvent) {
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        // setToken(data.token);
-        // localStorage.setItem("token", data.token); 
-        // router.push("/products"); // redirect to products page
-        login(data.token); // update auth context
-        router.push("/products"); // redirect to products page
+      const data = await response.json();
+
+      if (response.ok) {
+        // Store token and user data
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Redirect based on role
+        if (data.user.role === 'buyer') {
+          router.push('/buyer/dashboard');
+        } else if (data.user.role === 'seller') {
+          router.push('/seller/dashboard');
+        } else if (data.user.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else {
+          // fallback (if role missing)
+          router.push('/');
+        }
       } else {
-        setError(data.error);
+        setErrors({ submit: data.error });
       }
     } catch {
-      setError("Something went wrong. Please try again.");
+      setErrors({ submit: 'Something went wrong. Please try again.' });
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-indigo-100 animate-gradient-x flex items-center justify-center">
-    <div className="max-w-4xl bg-white rounded-2xl overflow-hidden flex flex-col md:flex-row animate-fade-in w-full h-full md:h-auto md:max-h-[90vh]">
-    
-    {/* Image side */}
-    <div className="md:w-1/2 relative h-48 md:h-auto">
-      <Image
-        src="/mfu.jpg"
-        alt="Login"
-        fill
-        className="object-cover"
-        priority
-      />
-    </div>
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+      <h1 className="text-2xl font-bold text-center mb-6">Sign In to Your Account</h1>
+      
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            Email Address
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your email"
+          />
+          {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+        </div>
 
-    {/* Form side */}
-      <form onSubmit={handleSignin}  className="md:w-1/2 p-8 md:p-10 space-y-6 flex flex-col justify-center h-full overflow-auto">
-      <h2 className="text-2xl md:text-3xl font-extrabold text-yellow-500 text-center">
-        Sign in to MFU SecondHand
-      </h2>
-            <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-semibold text-gray-700 mb-2"
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your password"
+          />
+          {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+        </div>
+
+        {errors.submit && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {errors.submit}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Email
-        </label>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          required
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-yellow-400 focus:border-yellow-400 transition"
-        />
-      </div>
-
-            <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-semibold text-gray-700 mb-2"
-        >
-          Password
-        </label>
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          required
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-yellow-400 focus:border-yellow-400 transition"
-        />
-      </div>
-
-        {error && <p className="text-red-500">{error}</p>}
-        <button className="bg-green-500 text-white px-4 py-2 rounded" type="submit">
-          Sign In
+          {isLoading ? 'Signing In...' : 'Sign In'}
         </button>
-
-        <p className="text-sm text-center text-gray-600">
-        Don&apos;t have account yet?{' '}
-        <Link href="/signup" className="text-yellow-500 hover:underline font-semibold">
-          Sign Up
-        </Link>
-      </p>
-
       </form>
-      {/* {token && (
-        <p className="mt-4 p-2 bg-gray-100 border break-all">Token: {token}</p>
-      )} */}
-    </div>
-      <style jsx>{`
-    @keyframes gradient-x {
-      0% {
-        background-position: 0% 50%;
-      }
-      50% {
-        background-position: 100% 50%;
-      }
-      100% {
-        background-position: 0% 50%;
-      }
-    }
-    .animate-gradient-x {
-      background-size: 200% 200%;
-      animation: gradient-x 15s ease infinite;
-    }
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(15px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    .animate-fade-in {
-      animation: fadeIn 0.8s ease forwards;
-    }
-  `}</style>
+
+      <div className="text-center mt-6">
+        <p className="text-gray-600">
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="text-blue-600 hover:text-blue-800">
+            Sign up here
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

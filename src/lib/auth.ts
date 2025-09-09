@@ -1,25 +1,31 @@
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
+const JWT_SECRET = process.env.JWT_SECRET || "secret";
 
-export async function hashPassword(password: string) {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(password, salt);
-}
-
-export async function verifyPassword(password: string, hashed: string) {
-  return bcrypt.compare(password, hashed);
-}
-
-export async function generateToken(payload: object) {
+export function createToken(payload: object) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
 }
 
-export async function verifyToken(token: string) {
+export function verifyToken(token: string) {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch {
     return null;
   }
+}
+
+export async function setAuthCookie(token: string) {
+  const cookieStore = await cookies();
+  cookieStore.set("seller_token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+  });
+}
+
+export async function clearAuthCookie() {
+  const cookieStore = await cookies();
+  cookieStore.delete("seller_token");
 }
